@@ -1,0 +1,601 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@300;400&display=swap');
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  --bg: #131110;
+  --surface: #1c1917;
+  --border: rgba(255, 255, 255, 0.07);
+  --text: #e8e0d5;
+  --muted: rgba(232, 224, 213, 0.32);
+  --accent: #c9a96e;
+  --accent2: #7eb8a4;
+  --sidebar: 240px;
+  --bar-h: 52px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  /* do NOT set touch-action:none on body — it blocks OrbitControls */
+}
+
+/* ═══════════════════════ CANVAS ═══════════════════════ */
+#app {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+#app canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  /* none = let OrbitControls handle all touch gestures (rotate + pinch-zoom) */
+  touch-action: none;
+}
+
+/* ═══════════════════════ DESKTOP SIDEBAR ═══════════════════════ */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: var(--sidebar);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 20px 20px;
+  border-right: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(19, 17, 16, 0.98), rgba(19, 17, 16, 0.94));
+  backdrop-filter: blur(14px);
+  overflow-y: auto;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* ── Lang toggle ── */
+.lang-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 3px;
+  border: 1px solid var(--border);
+}
+
+.lang-btn {
+  flex: 1;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.lang-btn.active {
+  background: rgba(201, 169, 110, 0.15);
+  color: var(--accent);
+}
+
+.lang-btn:hover:not(.active) {
+  color: var(--text);
+}
+
+.sidebar-logo {
+  font-family: 'DM Serif Display', serif;
+  font-size: 17px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.sidebar-sub {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
+
+.sidebar-label {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* ── Search ── */
+.mol-search {
+  width: 100%;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 8px 11px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  outline: none;
+  margin-bottom: 10px;
+  letter-spacing: 0.05em;
+  transition: border-color 0.18s;
+  -webkit-appearance: none;
+}
+
+.mol-search::placeholder {
+  color: var(--muted);
+}
+
+.mol-search:focus {
+  border-color: rgba(201, 169, 110, 0.35);
+}
+
+/* ── Mol list ── */
+.mol-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── Category header ── */
+.cat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 11px 6px;
+  margin-top: 10px;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.cat-header:first-child {
+  margin-top: 0;
+}
+
+.cat-title {
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 400;
+}
+
+.cat-arrow {
+  font-size: 12px;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+  display: inline-block;
+  transform: rotate(90deg);
+}
+
+.cat-header.collapsed .cat-arrow {
+  transform: rotate(0deg);
+}
+
+.cat-header.hidden {
+  display: none;
+}
+
+/* ── Category group ── */
+.cat-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.cat-group.collapsed {
+  display: none;
+}
+
+.cat-group.search-visible {
+  display: flex;
+}
+
+.mol-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  text-align: left;
+  padding: 8px 11px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  line-height: 1.2;
+  width: 100%;
+  -webkit-appearance: none;
+}
+
+.mol-btn .sym {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.4;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+  min-width: 44px;
+}
+
+.mol-btn .sub {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mol-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.mol-btn:hover .sym {
+  opacity: 1;
+}
+
+.mol-btn.active {
+  background: rgba(201, 169, 110, 0.09);
+  border-color: rgba(201, 169, 110, 0.28);
+  color: var(--accent);
+}
+
+.mol-btn.active .sym {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.mol-btn.hidden {
+  display: none;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+  flex-shrink: 0;
+}
+
+/* ── Legend ── */
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sidebar-hint {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+  line-height: 2;
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════ BOTTOM INFO BAR (desktop) ═══════════════════════ */
+.info-bar {
+  position: fixed;
+  bottom: 0;
+  left: var(--sidebar);
+  right: 0;
+  height: var(--bar-h);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 32px;
+  border-top: 1px solid var(--border);
+  background: rgba(19, 17, 16, 0.94);
+  backdrop-filter: blur(14px);
+}
+
+.info-mol-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 20px;
+  color: var(--accent);
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.info-mol-full {
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  color: var(--muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.info-bar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.info-atoms {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.info-atoms b {
+  color: var(--accent2);
+  font-weight: 400;
+}
+
+/* ═══════════════════════ MOBILE HAMBURGER ═══════════════════════ */
+.menu-toggle {
+  display: none;
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 40;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(19, 17, 16, 0.92);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.menu-toggle span {
+  display: block;
+  width: 18px;
+  height: 1.5px;
+  background: var(--text);
+  border-radius: 2px;
+  transition: all 0.22s ease;
+}
+
+.menu-toggle.open span:nth-child(1) {
+  transform: translateY(6.5px) rotate(45deg);
+}
+
+.menu-toggle.open span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.menu-toggle.open span:nth-child(3) {
+  transform: translateY(-6.5px) rotate(-45deg);
+}
+
+/* ═══════════════════════ MOBILE DRAWER OVERLAY ═══════════════════════ */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 28;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+
+.drawer-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ═══════════════════════ TOOLTIP ═══════════════════════ */
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  padding: 7px 13px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  pointer-events: none;
+  display: none;
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+}
+
+/* ═══════════════════════ TOUCH ATOM INFO BADGE (mobile) ═══════════════════════ */
+.atom-badge {
+  position: fixed;
+  z-index: 100;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--text);
+  background: rgba(28, 25, 23, 0.97);
+  border: 1px solid rgba(201, 169, 110, 0.4);
+  border-radius: 24px;
+  white-space: nowrap;
+  letter-spacing: 0.06em;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.atom-badge.visible {
+  opacity: 1;
+}
+
+select {
+  display: none !important;
+}
+
+/* ═══════════════════════ TABLET  (≤ 900px) ═══════════════════════ */
+@media (max-width: 900px) {
+  :root {
+    --sidebar: 200px;
+  }
+
+  .sidebar-hint {
+    display: none;
+  }
+
+  .legend {
+    display: none;
+  }
+
+  .sidebar-divider:last-of-type {
+    display: none;
+  }
+}
+
+/* ═══════════════════════ MOBILE  (≤ 640px) ═══════════════════════ */
+@media (max-width: 640px) {
+  :root {
+    --sidebar: 100vw;
+    --bar-h: 60px;
+  }
+
+  /* Sidebar becomes a full-screen slide-in drawer */
+  .sidebar {
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    transform: translateX(-100%);
+    padding: 24px 20px calc(20px + var(--safe-b));
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    z-index: 30;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Re-show legend & hint on mobile drawer */
+  .sidebar-hint {
+    display: block;
+  }
+
+  .legend {
+    display: flex;
+  }
+
+  /* Hamburger visible */
+  .menu-toggle {
+    display: flex;
+  }
+
+  /* Overlay visible when needed */
+  .drawer-overlay {
+    display: block;
+  }
+
+  /* Info bar spans full width */
+  .info-bar {
+    left: 0;
+    padding: 0 20px;
+    height: calc(var(--bar-h) + var(--safe-b));
+    padding-bottom: var(--safe-b);
+  }
+
+  .info-mol-name {
+    font-size: 17px;
+  }
+
+  .info-mol-full {
+    display: none;
+  }
+
+  .info-bar-sep:nth-child(4) {
+    display: none;
+  }
+
+  /* hide sep before full name */
+
+  /* Atom touch badge replaces tooltip */
+  .tooltip {
+    display: none !important;
+  }
+
+  /* Mol list bigger touch targets */
+  .mol-btn {
+    padding: 11px 12px;
+  }
+
+  .mol-btn .sym {
+    font-size: 14px;
+  }
+
+  /* Search bigger */
+  .mol-search {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+}
+
+/* ═══════════════════════ TINY PHONES  (≤ 380px) ═══════════════════════ */
+@media (max-width: 380px) {
+  .sidebar-logo {
+    font-size: 15px;
+  }
+
+  .lang-btn {
+    font-size: 9px;
+  }
+}
